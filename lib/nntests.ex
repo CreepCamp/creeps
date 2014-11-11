@@ -1,0 +1,2 @@
+defmodule Nntests do
+end
