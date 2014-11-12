@@ -1,31 +1,47 @@
 defmodule Genotype do 
-	def construct(sensor_name, actuator_name, hidden_layer_densities) do
-		construct(:ffnn, sensor_name, actuator_name, hidden_layer_densities)
+	def construct() do 
+		construct([:rng], [:pts], [1,3])
 	end
 
-	def construct(filename, sensor_name, actuator_name, hidden_layer_densities) do 
-		s = Genotype.Sensor.create sensor_name
-		a = Genotype.Actuator.create actuator_name
-		output_vector_length = a.vector_length
-		layer_densities = List.append(hidden_layer_densities, [output_vector_length])
+	def construct(sensors, actuators, hidden_layer_densities) do
+		construct(:ffnn, sensors, actuators, hidden_layer_densities)
+	end
+
+	def construct(filename, sensors, actuators, hidden_layer_densities) do 
+		sensors = for s <- sensors, do: Genotype.Sensor.create s
+		actuators = for a <- actuators, do: Genotype.Actuator.create a
+		
+		{_, output_vector_length} = Enum.map_reduce(actuators, 0, fn(actuator, acc) -> {0, acc + actuator.vector_length} end)
+		layer_densities = Enum.concat(hidden_layer_densities, [output_vector_length])
 		cortex = Genotype.Cortex.create
 
-		neurons = Genotype.Neuron.create_layers(cortex_id, s,a,layer_densities)
+		neurons = Genotype.Neuron.create_neurolayers(cortex.id, sensors,actuators,layer_densities)
 		[input_layer | _] = neurons
 		output_layer = List.last(neurons) 
 		input_layer_neuron_ids = for n <- input_layer, do: n.id
 		output_layer_neuron_ids = for n <- output_layer, do: n.id
 		neuron_ids = for n <- List.flatten(neurons), do: n.id 
-		%Genotype.Sensor{s| cortex_id: cortex_id, fanout_ids: input_layer_neuron_ids}
-		%Genotype.Actuator{a| cortex: id, fanin_ids: output_layer_neuron_ids}
-		%Genotype.Cortex{cortex| sensor_ids: [s.id], actuator_ids: [a.id], neuron_ids: neuron_ids}
+		sensors = for s <- sensors, do: %Genotype.Sensor{s| cortex_id: cortex.id, fanout_ids: input_layer_neuron_ids}
+		actuators = for a <- actuators, do: %Genotype.Actuator{a| cortex_id: cortex.id, fanin_ids: output_layer_neuron_ids}
+		cortex = %Genotype.Cortex{cortex| sensor_ids: (for s <- sensors, do: s.id ), actuator_ids: (for a <- actuators, do: a.id ), neuron_ids: neuron_ids}
 
-		{:ok, file} = File.open(filename, :write)
-		genotype = List.flatten [cortex, s, a | neurons]
-		for item <- genotype do 
-			File.write "#{inspect item}"
-		end
-		File.close(file)
+		
+		genotype = Poison.encode! %{cortex: cortex, sensors: sensors, actuators: actuators, neurons: neurons}
+		File.write("#{filename}.json", genotype)
+	end
+
+	def generate_id do 
+		{megaseconds,seconds,microseconds} = :erlang.now()
+		1/(megaseconds*1000000 + seconds + microseconds/10000)
+	end
+
+	def generate_ids(0,acc) do 
+		acc
+	end
+
+	def generate_ids(index,acc) do 
+		id = generate_id()
+		generate_ids(index-1,[id|acc])
 	end
 end
 
