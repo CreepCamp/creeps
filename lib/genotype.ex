@@ -31,8 +31,7 @@ defmodule Genotype do
 	end
 
 	def generate_id do 
-		{megaseconds,seconds,microseconds} = :erlang.now()
-		1/(megaseconds*1000000 + seconds + microseconds/10000)
+		UUID.uuid4()
 	end
 
 	def generate_ids(0,acc) do 

@@ -16,8 +16,4 @@ defmodule Phenotype.Supervisor do
 
 		supervise(children, strategy: :one_for_one)
 	end
-
-	def start_child(pid, opts) do 
-		Supervisor.start_child(pid)
-	end
 end
