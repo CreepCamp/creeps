@@ -7,6 +7,7 @@ defmodule Phenotype.Supervisor do
 
 	def init([pid, id]) do
 		IO.puts "Initialized #{__MODULE__}"
+		
 		children = [
 			supervisor(Phenotype.Actuator.Supervisor, [id], restart: :transient),
 			supervisor(Phenotype.Sensor.Supervisor, [id], restart: :transient),

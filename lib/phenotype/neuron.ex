@@ -19,4 +19,8 @@ defmodule Phenotype.Neuron do
 	def handle_cast({:update, inputs, outputs}, state) do 
 		{:noreply, %Phenotype.Neuron{state| input_pids: inputs, output_pids: outputs}}
 	end
+
+	def handle_cast({:forward, caller, [signal]}, state) do
+		{:noreply, state}
+	end
 end

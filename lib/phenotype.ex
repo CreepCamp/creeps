@@ -7,9 +7,9 @@ defmodule Phenotype do
 
 	def init(opts) do 
 		IO.puts "Initilizing #{__MODULE__}"
-
+		
 		GenServer.cast(self(),{:init, opts.filename})
-		{:ok, opts}
+		{:ok, Map.put(opts, :ets, ets) }
 	end
 
 	def init_cortex(pid, cortex_pid, id) do 
@@ -85,8 +85,8 @@ defmodule Phenotype do
 
 	# Make the binding
 	defp bind_neurons([neuron|rest], refs) do
-		inputs = Map.take(refs,neuron.input_ids)
-		outputs = Map.take(refs, neuron.output_ids)
+		inputs = for input <- neuron.input_ids, do: {refs[input.id], input.weight}
+		outputs = for output <- neuron.output_ids, do: refs[output.id]
 		Phenotype.Neuron.update(refs[neuron.id.id], inputs, outputs)
 		bind_neurons(rest, refs)
 	end
