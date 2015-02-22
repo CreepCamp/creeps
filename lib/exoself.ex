@@ -1,4 +1,4 @@
-defmodule Phenotype do
+defmodule ExoSelf do
 	use GenServer
 
 	def start_link(opts) do 
@@ -8,13 +8,17 @@ defmodule Phenotype do
 	def init(opts) do 
 		IO.puts "Initilizing #{__MODULE__}"
 		
-		GenServer.cast(self(),{:init, opts.filename})
-		{:ok, Map.put(opts, :ets, ets) }
+		GenServer.cast(self(),{:init, 1 }) 
+		{:ok, Map.put(opts, :ets, nil) }
 	end
 
 	def init_cortex(pid, cortex_pid, id) do 
 		GenServer.cast(pid, {:init_cortex, cortex_pid, id})
 	end
+
+  def finished(pid, neurons) do 
+    GenServer.cast(pid, {:finished, neurons})
+  end
 
 	def handle_cast({:init, id}, state) do 
 		Phenotype.Supervisor.start_link(self(), id)
@@ -29,8 +33,7 @@ defmodule Phenotype do
 
 		# reading the json file. ensuring that everything is in place :)
 		# dont know why he needs ets to do the job.
-
-		json = File.read!(state.filename)
+		json = Poison.decode!(File.read!(state.filename), keys: :atoms!)
 
 		cortex = json.cortex
 		neurons = json.neurons
@@ -41,7 +44,11 @@ defmodule Phenotype do
 		actuators_pids = init_actuators(actuators, cortex_pid, asup, %{})
 		sensors_pids = init_sensors(sensors, cortex_pid, ssup, %{})
 
-		Phenotype.Cortex.update(cortex_pid, cortex, Map.values(sensors_pids), Map.values(neurons_pids), Map.values(actuators_pids))
+		Phenotype.Cortex.update(cortex_pid,
+        cortex,
+        Map.values(sensors_pids), 
+        Map.values(neurons_pids),
+        Map.values(actuators_pids))
 
 		refs = Map.merge(Map.merge(neurons_pids, actuators_pids), sensors_pids)
 
@@ -49,13 +56,24 @@ defmodule Phenotype do
 		bind_actuators(actuators, refs)
 		bind_sensors(sensors, refs)
 
+    # By the book, the cortex here should start working ...
+    # As there aren't any trainer right now it should ask the cortex 
+    # to do the job several hundreds of times
+    Phenotype.Cortex.start(cortex_pid, 10)
+
 		{:noreply, state}
 	end
+
+  def handle_cast({:finished, neurons}, state ) do
+    IO.puts "Yeah Cortex finished ! Hourray"
+    send state.pid, {:finished, self()}
+    {:noreply, state}
+  end
 
 	# Initialize all processes. 
 	defp init_neurons([neuron|rest], cortex_pid, nsup, acc ) do
 		{:ok, pid} = Phenotype.Neuron.Supervisor.start_child(nsup, [neuron, cortex_pid])
-		id = "#{neuron.id.id}"
+		id = neuron.id
 		init_neurons(rest, cortex_pid, nsup, Map.put(acc, id, pid))
 	end
 
@@ -65,7 +83,7 @@ defmodule Phenotype do
 
 	defp init_actuators([actuator|rest], cortex_pid, asup, acc ) do
 		{:ok, pid} = Phenotype.Actuator.Supervisor.start_child(asup, [actuator, cortex_pid])
-		id = "#{actuator.id.id}"
+		id = actuator.id
 		init_neurons(rest, cortex_pid, asup, Map.put(acc, id, pid))
 	end
 
@@ -75,7 +93,7 @@ defmodule Phenotype do
 
 	defp init_sensors([sensor|rest], cortex_pid, ssup, acc ) do
 		{:ok, pid} = Phenotype.Sensor.Supervisor.start_child(ssup, [sensor, cortex_pid])
-		id = sensor.id.id
+		id = sensor.id
 		init_neurons(rest, cortex_pid, ssup, Map.put(acc, id, pid))
 	end
 
@@ -85,9 +103,15 @@ defmodule Phenotype do
 
 	# Make the binding
 	defp bind_neurons([neuron|rest], refs) do
-		inputs = for input <- neuron.input_ids, do: {refs[input.id], input.weight}
-		outputs = for output <- neuron.output_ids, do: refs[output.id]
-		Phenotype.Neuron.update(refs[neuron.id.id], inputs, outputs)
+		inputs = for input <- neuron.input_ids do
+      if input.id != "biais" do 
+        {refs[input.id], input.weight}
+      else
+        {:biais, input.weight}
+      end
+    end
+		outputs = for output <- neuron.output_ids, do: refs[output]
+		Phenotype.Neuron.update(refs[neuron.id], inputs, outputs)
 		bind_neurons(rest, refs)
 	end
 
@@ -96,7 +120,7 @@ defmodule Phenotype do
 
 	defp bind_actuators([actuator|rest], refs) do
 		outputs = Map.take(refs, actuator.fanin_ids)
-		Phenotype.Actuator.update(refs[actuator.id.id], outputs)		
+		Phenotype.Actuator.update(refs[actuator.id], Map.values(outputs))
 		bind_actuators(rest, refs)
 	end
 
@@ -105,7 +129,7 @@ defmodule Phenotype do
 
 	defp bind_sensors([sensor|rest], refs) do
 		inputs = Map.take(refs, sensor.fanout_ids)
-		Phenotype.Sensor.update(refs[sensor.id.id],inputs)			
+		Phenotype.Sensor.update(refs[sensor.id],Map.values(inputs))
 		bind_sensors(rest, refs)
 	end
 

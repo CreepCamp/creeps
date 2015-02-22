@@ -4,7 +4,7 @@ defmodule Genotype.Sensor do
 	def create(name) do 
 		case name do 
 			:rng ->
-				%Genotype.Sensor{id: %{type: :sensor, id: Genotype.generate_id()}, name: name, vector_length: 2}
+				%Genotype.Sensor{id: Genotype.generate_id(), name: name, vector_length: 2}
 			_ ->
 				exit "System doesn't support that kind of Sensor named #{name}"
 		end	

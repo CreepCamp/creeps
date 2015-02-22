@@ -26,7 +26,7 @@ defmodule Genotype do
 		cortex = %Genotype.Cortex{cortex| sensor_ids: (for s <- sensors, do: s.id ), actuator_ids: (for a <- actuators, do: a.id ), neuron_ids: neuron_ids}
 
 		
-		genotype = Poison.encode! %{cortex: cortex, sensors: sensors, actuators: actuators, neurons: neurons}
+		genotype = Poison.encode! %{cortex: cortex, sensors: sensors, actuators: actuators, neurons: List.flatten(neurons)}
 		File.write("#{filename}.json", genotype)
 	end
 

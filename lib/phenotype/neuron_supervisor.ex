@@ -14,7 +14,7 @@ defmodule Phenotype.Neuron.Supervisor do
 		supervise(children, strategy: :simple_one_for_one)
 	end
 
-	def start_child(pid, opts) do 
+	def start_child(pid,  opts) do 
 		Supervisor.start_child(pid, opts)
 	end
 end
