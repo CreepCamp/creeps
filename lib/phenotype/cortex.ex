@@ -65,7 +65,11 @@ defmodule Phenotype.Cortex do
   # Oddly enough, that's end condition. No more run, notify ExoSelf end of game.
   def handle_cast({:start, 0}, state) do 
     IO.puts "End of Game FYeah"
-    ExoSelf.finished(state.exoself_pid, state.neuron_pids)
+    # Before finishing, we gather from neurons their weight. 
+    neuron_n_weight = for n <- state.neuron_pids do
+      Phenotype.Neuron.fetch_backup_info(n)
+    end
+    ExoSelf.finished(state.exoself_pid, neuron_n_weight)
     {:noreply, %Phenotype.Cortex{state | run_left: 0, expected_actuators: state.actuator_pids}}
   end
 

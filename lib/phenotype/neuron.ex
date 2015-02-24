@@ -25,12 +25,23 @@ defmodule Phenotype.Neuron do
     GenServer.cast(pid, {:forward, data, caller})
   end
 
+  def fetch_backup_info(pid) do 
+    GenServer.call(pid, :backup_info)
+  end
+
+  def handle_call(:backup_info, from, state) do 
+    # back up info are minimals ... 
+    # id, and updated weights ...
+
+    {:reply, {state.id, state.input_pids}, from, state} 
+  end
+
   # This is main neuron entrypoint. 
   # It could be called by another neuron, or by a Sensor.
   def handle_cast({:forward, data, origin_pid}, state) do 
     state = process_input(state, origin_pid, data)
     if length(state.expected_inputs) == 1 do 
-      [{:biais, weight}] = state.expected_inputs
+      [{:biais, weight, -1}] = state.expected_inputs
       IO.puts "Neuron #{state.id} finished is job !" 
       # we proudly announce next layer that we've completed our job :)
       # Note: apply(module, function(as atom), [params])
@@ -63,7 +74,7 @@ defmodule Phenotype.Neuron do
 
   # World should be so fine that for each input there should be enough weight given. 
   # expect to be one more weight as biais (should be set as such by genotype ..., aint the case right now... bad :)
-  def find([{pid, weights} = input | rest], origin_pid, data, acc) do 
+  def find([{pid, weights, _id} = input | rest], origin_pid, data, acc) do 
     if pid == origin_pid do 
       {rest ++ acc, dot(data, weights, 0) }
     else
