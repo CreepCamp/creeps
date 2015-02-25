@@ -8,7 +8,7 @@ defmodule Phenotype.Neuron do
 	end
 
 	def init([neuron, cortex_pid]) do 
-		state = %Phenotype.Neuron{id: neuron.id, layer: neuron.layer, cortex_pid: cortex_pid, activation_function: String.to_atom(neuron.activation_function), accumulator: 0}
+		state = %Phenotype.Neuron{id: neuron.id, layer: neuron.layer, cortex_pid: cortex_pid, activation_function: (neuron.activation_function), accumulator: 0}
 		IO.puts "Initilizing #{__MODULE__} #{state.id} #{inspect self()}"
 		{:ok, state}
 	end

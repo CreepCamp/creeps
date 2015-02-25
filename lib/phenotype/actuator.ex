@@ -9,7 +9,7 @@ defmodule Phenotype.Actuator do
 	end
 
 	def init([actuator, cortex_pid]) do 
-		state = %Phenotype.Actuator{id: actuator.id, cortex_pid: cortex_pid, name: String.to_atom(actuator.name), vector_length: actuator.vector_length }
+		state = %Phenotype.Actuator{id: actuator.id, cortex_pid: cortex_pid, name: (actuator.name), vector_length: actuator.vector_length }
 		IO.puts "Initilizing #{__MODULE__} #{state.id} #{inspect self()}"
 		{:ok, state}
 	end

@@ -7,7 +7,7 @@ defmodule Phenotype.Sensor do
 	end
 
 	def init([sensor, cortex_pid]) do 
-		state = %Phenotype.Sensor{id: sensor.id, cortex_pid: cortex_pid, name: String.to_atom(sensor.name), vector_length: sensor.vector_length}
+		state = %Phenotype.Sensor{id: sensor.id, cortex_pid: cortex_pid, name: (sensor.name), vector_length: sensor.vector_length}
 		IO.puts "Initilizing #{__MODULE__} #{state.id} #{inspect self()}"
 		{:ok, state}
 	end
@@ -34,6 +34,7 @@ defmodule Phenotype.Sensor do
 	end
 
   def handle_cast(:sense, state) do 
+    IO.puts "Sensor got a call from cortex ! pushing to #{length state.fanout_pids} neurons"
     for pid <- state.fanout_pids do 
       # as we don't know where it will go to ( it could very well directly go to an actuator ... )
       # But as Elixir is somewhat open ...

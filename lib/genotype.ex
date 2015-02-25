@@ -26,8 +26,7 @@ defmodule Genotype do
 		cortex = %Genotype.Cortex{cortex| sensor_ids: (for s <- sensors, do: s.id ), actuator_ids: (for a <- actuators, do: a.id ), neuron_ids: neuron_ids}
 
 		
-		genotype = Poison.encode! %{cortex: cortex, sensors: sensors, actuators: actuators, neurons: List.flatten(neurons)}
-		File.write("#{filename}.json", genotype)
+		save(filename, %{cortex: cortex, sensors: sensors, actuators: actuators, neurons: List.flatten(neurons)} )
 	end
 
 	def generate_id do 
@@ -42,6 +41,56 @@ defmodule Genotype do
 		id = generate_id()
 		generate_ids(index-1,[id|acc])
 	end
+
+  def save(name, genotype) do 
+    load(name)
+    # Genotype is a Map %{neurons: [], cortex:%, sensors: [], actuators: []
+    for n <- genotype.neurons, do: :ets.insert(name, {n.id,:neuron, n})
+    for a <- genotype.actuators, do: :ets.insert(name, {a.id,:actuator,a })
+    for s <- genotype.sensors, do: :ets.insert(name, {s.id,:sensor, s})
+    :ets.insert(name, {genotype.cortex.id,:cortex, genotype.cortex})
+    to_file(name)
+  end
+
+  def load(name) do 
+    if :ets.info(name) == :undefined do
+      if  File.exists?(name_to_filename(name)) do
+        {:ok,pid} = :ets.file2tab(name)
+      else
+        :ets.new(name, [:named_table, :public,:set])
+        to_file(name)
+      end
+    end
+  end
+
+  def to_file(name) do 
+    :ets.tab2file(name,name_to_filename(name))
+  end
+
+  def fetch(name, id) do
+    [value|_] = :ets.lookup(name,id) 
+    value
+  end
+
+  # This one is a new one for me ;)
+  # What it actually means is, search for type element in my :ets
+  # and give them back.
+  def fetch_all(name, type) do 
+    List.flatten( :ets.match(name, {:'_', type, :'$1'}))
+  end
+
+  def insert(name, id, type ,value) do 
+    :ets.insert(name, {id, type, value})
+  end
+
+  def clean(name) do 
+   if :ets.info(name) != :undefined, do: :ets.delete(name)
+   File.rm(name_to_filename(name))
+  end
+
+  def name_to_filename(name) do 
+    "priv/genotypes/#{name}.ets"
+  end
 end
 
 # at page 186

@@ -33,12 +33,12 @@ defmodule ExoSelf do
 
 		# reading the json file. ensuring that everything is in place :)
 		# dont know why he needs ets to do the job.
-		json = Poison.decode!(File.read!(state.filename), keys: :atoms!)
+    Genotype.load(state.filename)
 
-		cortex = json.cortex
-		neurons = json.neurons
-		actuators = json.actuators
-		sensors = json.sensors
+		[cortex] = Genotype.fetch_all(state.filename, :cortex)
+		neurons = Genotype.fetch_all(state.filename, :neuron)
+		actuators = Genotype.fetch_all(state.filename, :actuator)
+		sensors = Genotype.fetch_all(state.filename, :sensor)
 
 		neurons_pids = init_neurons(neurons, cortex_pid, nsup, %{})
 		actuators_pids = init_actuators(actuators, cortex_pid, asup, %{})
@@ -61,7 +61,7 @@ defmodule ExoSelf do
     # to do the job several hundreds of times
     Phenotype.Cortex.start(cortex_pid, 10)
 
-		{:noreply, Map.put(state, :content,json)}
+		{:noreply, state}
 	end
 
 
@@ -71,40 +71,17 @@ defmodule ExoSelf do
     IO.puts "Yeah Cortex finished ! Hourray"
 
     # Now that we're finished, saves the status of the NN to file (update)
-    # Current file is store in state under content
-
-    # neurons here follows this rules ( from genotype/neuron )
-    # defstruct id: nil, layer: 0, cortex_id: nil, activation_function: nil, input_ids: [], output_ids: [], vector_length: 1
-    # Updating the struct should be simple enough. find the matching id.
-    oldlist = state.content.neurons
-    
-    newlist = for n <- neurons_n_weight do
-      # working through each neurons, find the appropriate neuron, then plop
-      # sadly for me, they're a list of Maps, thus, we can't use List.keyfind(list, item, pos)
-      update_neuron(n, oldlist)
+    for {id, input_weight} <- neurons_n_weight do
+      {id, type, content} = Genotype.fetch(state.filename,id )
+      # syntaxic sugar :)
+      new_inputs = for {_pid, weight, input_id} <- input_weight, do: %{id: input_id, weight: weight}
+      Genotype.insert(state.filename, id, type, %{content| input_ids: new_inputs})
     end
 
-		genotype = Poison.encode! %{cortex: state.content.cortex, sensors: state.content.sensors, 
-      actuators: state.content.actuators, neurons: newlist}
-
-		File.write("#{state.filename}.json", genotype)
 
     send state.pid, {:finished, self()}
     {:noreply, state} 
   end
-
-  defp update_neuron({id, input_weights} = neuron, [oldneuron|file_neurons]) do 
-    if id == oldneuron.id do 
-      # Note: input weights : {pid, weight, id}
-      # Note: old inputs : {id, weight} 
-      new_inputs = for {_,w,i} <- input_weights, do: %{id: i,weight:  w}
-      %{oldneuron| input_ids: new_inputs}
-    else
-      update_neuron(neuron,file_neurons)
-    end
-  end
-
-  def find_neuron_for_save({id,_}, []), do: IO.puts "Failed to find neuron ided #{id} for genotype update"
 
 
 	# Initialize all processes. 
@@ -141,7 +118,7 @@ defmodule ExoSelf do
 	# Make the binding
 	defp bind_neurons([neuron|rest], refs) do
 		inputs = for input <- neuron.input_ids do
-      if input.id != "biais" do 
+      if input.id != :biais do 
         {refs[input.id], input.weight, input.id}
       else
         # -1 because otherwise the find algo in Neuron (that matches pids) would fail.
