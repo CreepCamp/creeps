@@ -10,7 +10,7 @@ defmodule Phenotype.Actuator do
 
 	def init([actuator, cortex_pid]) do 
 		state = %Phenotype.Actuator{id: actuator.id, cortex_pid: cortex_pid, name: (actuator.name), vector_length: actuator.vector_length }
-		IO.puts "Initilizing #{__MODULE__} #{state.id} #{inspect self()}"
+    # IO.puts "Initilizing #{__MODULE__} #{state.id} #{inspect self()}"
 		{:ok, state}
 	end
 
@@ -56,7 +56,7 @@ defmodule Phenotype.Actuator do
   # This is default actuator function, does nothing but printing given value.
   # and return given data
   def pts(state,data) do
-    IO.puts "#{__MODULE__} #{state.id} Finished ! Value #{data}"
+    # IO.puts "#{__MODULE__} #{state.id} Finished ! Value #{data}"
     data
   end
 end

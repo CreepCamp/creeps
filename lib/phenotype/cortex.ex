@@ -14,7 +14,7 @@ defmodule Phenotype.Cortex do
 	end
 
 	def init([exoself_pid, id] = opts) do 
-		IO.puts "Initilizing #{__MODULE__}"
+    # IO.puts "Initilizing #{__MODULE__}"
 		
 		ExoSelf.init_cortex(exoself_pid, self(), id)
 		{:ok, %Phenotype.Cortex{exoself_pid: exoself_pid}}
@@ -50,7 +50,7 @@ defmodule Phenotype.Cortex do
     if length(expected_apids) == 0 do
       # we don't expect anymore info from actuators, thus, turn has ended, do some magic
       # restart the process with one less run.
-      IO.puts "End of Loop yeah"
+      # IO.puts "End of Loop yeah"
       start(self(), state.run_left-1)
       {:noreply, %Phenotype.Cortex{state| expected_actuators: state.actuator_pids}}
     else 
@@ -64,7 +64,7 @@ defmodule Phenotype.Cortex do
 
   # Oddly enough, that's end condition. No more run, notify ExoSelf end of game.
   def handle_cast({:start, 0}, state) do 
-    IO.puts "End of Game FYeah"
+    # IO.puts "End of Game FYeah"
     # Before finishing, we gather from neurons their weight. 
     neuron_n_weight = for n <- state.neuron_pids do
       Phenotype.Neuron.fetch_backup_info(n)
@@ -74,7 +74,7 @@ defmodule Phenotype.Cortex do
   end
 
   def handle_cast({:start, nb_run}, state) do 
-    IO.puts "Begining of NN job ! #{nb_run} to go !"
+    # IO.puts "Begining of NN job ! #{nb_run} to go !"
     for spid <- state.sensor_pids do
       # Tell sensor to do the job.
       Phenotype.Sensor.sense(spid)

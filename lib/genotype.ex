@@ -3,6 +3,10 @@ defmodule Genotype do
 		construct([:rng], [:pts], [1,3])
 	end
 
+  def construct(filename) do 
+    construct(filename, [:rng], [:pts], [1,3])
+  end
+
 	def construct(sensors, actuators, hidden_layer_densities) do
 		construct(:ffnn, sensors, actuators, hidden_layer_densities)
 	end
@@ -89,8 +93,15 @@ defmodule Genotype do
   end
 
   def name_to_filename(name) do 
+    if not File.exists?("priv/genotypes/"), do: File.mkdir_p("/priv/genotypes")
     "priv/genotypes/#{name}.ets"
   end
+
+  def to_dot(name) do 
+
+    Genotype.Dot.create(name, self())
+  end
+
 end
 
 # at page 186

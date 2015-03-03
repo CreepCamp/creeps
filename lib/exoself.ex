@@ -29,7 +29,7 @@ defmodule ExoSelf do
 		asup = Process.whereis(String.to_atom("Elixir.Phenotype.Actuator.Supervisor_#{id}"))
 		ssup = Process.whereis(String.to_atom("Elixir.Phenotype.Sensor.Supervisor_#{id}"))
 		nsup = Process.whereis(String.to_atom("Elixir.Phenotype.Neuron.Supervisor_#{id}"))
-		IO.puts "Cortex fired, #{inspect asup} #{inspect ssup} #{inspect nsup}"
+    # IO.puts "Cortex fired, #{inspect asup} #{inspect ssup} #{inspect nsup}"
 
 		# reading the json file. ensuring that everything is in place :)
 		# dont know why he needs ets to do the job.

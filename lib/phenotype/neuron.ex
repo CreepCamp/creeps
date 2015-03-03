@@ -9,7 +9,7 @@ defmodule Phenotype.Neuron do
 
 	def init([neuron, cortex_pid]) do 
 		state = %Phenotype.Neuron{id: neuron.id, layer: neuron.layer, cortex_pid: cortex_pid, activation_function: (neuron.activation_function), accumulator: 0}
-		IO.puts "Initilizing #{__MODULE__} #{state.id} #{inspect self()}"
+    # IO.puts "Initilizing #{__MODULE__} #{state.id} #{inspect self()}"
 		{:ok, state}
 	end
 
@@ -42,13 +42,13 @@ defmodule Phenotype.Neuron do
     state = process_input(state, origin_pid, data)
     if length(state.expected_inputs) == 1 do 
       [{:biais, weight, -1}] = state.expected_inputs
-      IO.puts "Neuron #{state.id} finished is job !" 
+      # IO.puts "Neuron #{state.id} finished is job !" 
       # we proudly announce next layer that we've completed our job :)
       # Note: apply(module, function(as atom), [params])
       # Note: target expects an array of info :)
       real_value = apply(__MODULE__, state.activation_function,[state.accumulator + weight])
       for n <- state.output_pids do 
-        IO.puts "Phenotype.Neuron.forward(#{inspect n},#{inspect [real_value]}, self())"
+      # IO.puts "Phenotype.Neuron.forward(#{inspect n},#{inspect [real_value]}, self())"
         Phenotype.Neuron.forward(n,[real_value], self()) 
       end
 
