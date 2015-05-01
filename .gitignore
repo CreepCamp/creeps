@@ -2,7 +2,7 @@
 /deps
 erl_crash.dump
 *.ez
-*.sw[opn]
+*.sw*
 *.vim
 *.lock
 *.json
