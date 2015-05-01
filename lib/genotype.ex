@@ -1,20 +1,16 @@
 defmodule Genotype do 
 	def construct() do 
-		construct([:rng], [:pts], [1,3])
+		construct(:ffnn, Scape.Test, [1,3])
 	end
 
   def construct(filename) do 
-    construct(filename, [:rng], [:pts], [1,3])
+    construct(filename, Scape.Test, [1,3])
   end
 
-	def construct(sensors, actuators, hidden_layer_densities) do
-		construct(:ffnn, sensors, actuators, hidden_layer_densities)
-	end
+	def construct(filename, scape, hidden_layer_densities) do 
+		sensors =  scape.Morphology.sensors()
+		actuators = scape.Morphology.actuators()
 
-	def construct(filename, sensors, actuators, hidden_layer_densities) do 
-		sensors = for s <- sensors, do: Genotype.Sensor.create s
-		actuators = for a <- actuators, do: Genotype.Actuator.create a
-		
 		{_, output_vector_length} = Enum.map_reduce(actuators, 0, fn(actuator, acc) -> {0, acc + actuator.vector_length} end)
 		layer_densities = Enum.concat(hidden_layer_densities, [output_vector_length])
 		cortex = Genotype.Cortex.create
@@ -59,7 +55,7 @@ defmodule Genotype do
   def load(name) do 
     if :ets.info(name) == :undefined do
       if  File.exists?(name_to_filename(name)) do
-        {:ok,pid} = :ets.file2tab(name)
+        {:ok,pid} = :ets.file2tab(String.to_char_list(name_to_filename(name)))
       else
         :ets.new(name, [:named_table, :public,:set])
         to_file(name)
@@ -68,7 +64,11 @@ defmodule Genotype do
   end
 
   def to_file(name) do 
-    :ets.tab2file(name,name_to_filename(name))
+    :ets.tab2file(name,String.to_char_list(name_to_filename(name)))
+  end
+
+  def rename(name, toname) do
+    File.cp(name_to_filename(name), name_to_filename(toname))
   end
 
   def fetch(name, id) do

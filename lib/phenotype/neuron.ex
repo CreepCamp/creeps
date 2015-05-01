@@ -46,7 +46,7 @@ defmodule Phenotype.Neuron do
       # we proudly announce next layer that we've completed our job :)
       # Note: apply(module, function(as atom), [params])
       # Note: target expects an array of info :)
-      real_value = apply(__MODULE__, state.activation_function,[state.accumulator + weight])
+      real_value = apply(Genotype.Activation, state.activation_function,[state.accumulator + weight])
       for n <- state.output_pids do 
       # IO.puts "Phenotype.Neuron.forward(#{inspect n},#{inspect [real_value]}, self())"
         Phenotype.Neuron.forward(n,[real_value], self()) 
@@ -96,7 +96,4 @@ defmodule Phenotype.Neuron do
 		acc 
 	end
 
-  def tanh(value) do 
-    :math.tanh(value)
-  end
 end

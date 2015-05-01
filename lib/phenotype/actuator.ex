@@ -1,7 +1,7 @@
 defmodule Phenotype.Actuator do 
   # Expected inputs are currently not received inputs. 
   # Accumulator is sum of received inputs.
-	defstruct id: nil, cortex_pid: nil, name: nil, vector_length: 1, fanin_pids: [], expected_inputs: [], accumulator: 0
+	defstruct id: nil, cortex_pid: nil, name: nil, vector_length: 1, fanin_pids: [], expected_inputs: [], accumulator: 0, sim_pid: nil
 	use GenServer
 
 	def start_link(actuator, cortex_pid) do 
@@ -14,8 +14,8 @@ defmodule Phenotype.Actuator do
 		{:ok, state}
 	end
 
-	def update(pid, fanins) do 
-		GenServer.cast(pid, {:update, fanins})
+	def update(pid, fanins, sim_pid) do 
+		GenServer.cast(pid, {:update, fanins, sim_pid})
 	end
 
   def terminate(pid) do 
@@ -33,9 +33,9 @@ defmodule Phenotype.Actuator do
 
     if length(expected_inputs) == 0 do 
       #We've completed the job, Hourray :)
-      result = apply(__MODULE__, state.name, [state,state.accumulator])  
+      {:result, fitness, should_stop} = GenServer.call(state.sim_pid, {:act, state.accumulator})
       # Notifying cortex of our success
-      Phenotype.Cortex.actuator_finished(state.cortex_pid, self(),result)
+      Phenotype.Cortex.actuator_finished(state.cortex_pid, self(),fitness, should_stop)
       # Dont forget to reset state to waiting job :)
       {:noreply, %Phenotype.Actuator{state | expected_inputs: state.fanin_pids, accumulator: 0}}
     else
@@ -48,15 +48,7 @@ defmodule Phenotype.Actuator do
     {:stop, :normal, state}
   end
 
-	def handle_cast({:update, fanins}, state) do 
-		{:noreply, %Phenotype.Actuator{state| fanin_pids: fanins}}
+	def handle_cast({:update, fanins, sim_pid}, state) do 
+		{:noreply, %Phenotype.Actuator{state| fanin_pids: fanins, sim_pid: sim_pid}}
 	end
-
-
-  # This is default actuator function, does nothing but printing given value.
-  # and return given data
-  def pts(state,data) do
-    # IO.puts "#{__MODULE__} #{state.id} Finished ! Value #{data}"
-    data
-  end
 end

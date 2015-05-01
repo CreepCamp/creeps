@@ -1,6 +1,10 @@
 defmodule ExoSelf do
 	use GenServer
 
+  def start(filename, callback) do 
+    start_link(%{filename: filename, pid: callback})
+  end
+
 	def start_link(opts) do 
 		GenServer.start_link(__MODULE__, opts, [])
 	end
@@ -8,6 +12,10 @@ defmodule ExoSelf do
 	def init(opts) do 
 		IO.puts "Initilizing #{__MODULE__}"
 		
+    # seeding :)
+    {a,b,c} = :erlang.now()
+    :random.seed(a,b,c)
+
 		GenServer.cast(self(),{:init, 1 }) 
 		{:ok, Map.put(opts, :ets, nil) }
 	end
@@ -40,6 +48,7 @@ defmodule ExoSelf do
 		actuators = Genotype.fetch_all(state.filename, :actuator)
 		sensors = Genotype.fetch_all(state.filename, :sensor)
 
+    scapes_pids = init_scapes(sensors,actuators)
 		neurons_pids = init_neurons(neurons, cortex_pid, nsup, %{})
 		actuators_pids = init_actuators(actuators, cortex_pid, asup, %{})
 		sensors_pids = init_sensors(sensors, cortex_pid, ssup, %{})
@@ -53,8 +62,8 @@ defmodule ExoSelf do
 		refs = Map.merge(Map.merge(neurons_pids, actuators_pids), sensors_pids)
 
 		bind_neurons(neurons, refs)
-		bind_actuators(actuators, refs)
-		bind_sensors(sensors, refs)
+		bind_actuators(actuators, scapes_pids, refs)
+		bind_sensors(sensors, scapes_pids, refs)
 
     # By the book, the cortex here should start working ...
     # As there aren't any trainer right now it should ask the cortex 
@@ -85,6 +94,22 @@ defmodule ExoSelf do
 
 
 	# Initialize all processes. 
+  defp init_scapes(sensors, actuators) do 
+    sensor_scapes = for s <- sensors, do: s.scape
+    actuator_scapes = for s <- actuators, do: s.scape
+
+    for {scope, scape} <- Enum.uniq(sensor_scapes ++ actuator_scapes) do
+      case scope do
+        :private -> 
+          {scape, scape.Simulation.start_link([])}
+        :public ->
+          {scape, scape.Simulation.pid()}
+        _ ->
+          IO.puts "Unexpected scape during initialization #{scope}, #{scape}"
+      end
+    end
+  end
+
 	defp init_neurons([neuron|rest], cortex_pid, nsup, acc ) do
 		{:ok, pid} = Phenotype.Neuron.Supervisor.start_child(nsup, [neuron, cortex_pid])
 		id = neuron.id
@@ -134,21 +159,25 @@ defmodule ExoSelf do
 	defp bind_neurons([], _refs) do 
 	end
 
-	defp bind_actuators([actuator|rest], refs) do
+	defp bind_actuators([actuator|rest], scapes_pids, refs) do
+    {_, name} = actuator.scape
+    {_, pid} = List.findkey(scapes_pids,name, 0) 
 		outputs = Map.take(refs, actuator.fanin_ids)
-		Phenotype.Actuator.update(refs[actuator.id], Map.values(outputs))
-		bind_actuators(rest, refs)
+		Phenotype.Actuator.update(refs[actuator.id], Map.values(outputs), pid)
+		bind_actuators(rest,scapes_pids, refs)
 	end
 
-	defp bind_actuators([], _refs) do 
+	defp bind_actuators([],_scapes, _refs) do 
 	end
 
-	defp bind_sensors([sensor|rest], refs) do
+	defp bind_sensors([sensor|rest], scapes_pids, refs) do
+    {_, name} = sensor.scape
+    {_, pid} = List.findkey(scapes_pids,name, 0) 
 		inputs = Map.take(refs, sensor.fanout_ids)
-		Phenotype.Sensor.update(refs[sensor.id],Map.values(inputs))
-		bind_sensors(rest, refs)
+		Phenotype.Sensor.update(refs[sensor.id],Map.values(inputs), pid)
+		bind_sensors(rest, scapes_pids, refs)
 	end
 
-	defp bind_sensors([], _refs) do 
+	defp bind_sensors([],_scapes, _refs) do 
 	end
 end

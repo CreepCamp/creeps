@@ -1,5 +1,5 @@
 defmodule Phenotype.Sensor do 
-	defstruct id: nil, cortex_pid: nil, name: nil, vector_length: 0, fanout_pids: []
+	defstruct id: nil, cortex_pid: nil, name: nil, vector_length: 0, fanout_pids: [], sim_pid: nil
 	use GenServer
 
 	def start_link(sensor, cortex_pid) do 
@@ -12,8 +12,8 @@ defmodule Phenotype.Sensor do
 		{:ok, state}
 	end
 
-	def update(pid, fanouts) do 
-		GenServer.cast(pid, {:update, fanouts})
+	def update(pid, fanouts, sim_pid) do 
+		GenServer.cast(pid, {:update, fanouts, sim_pid})
 	end
 
   def sense(pid) do 
@@ -29,8 +29,8 @@ defmodule Phenotype.Sensor do
     {:stop, :normal, state}
   end
 
-	def handle_cast({:update, fanouts}, state) do 
-		{:noreply, %Phenotype.Sensor{state|fanout_pids: fanouts}}
+	def handle_cast({:update, fanouts, sim_pid}, state) do 
+		{:noreply, %Phenotype.Sensor{state|fanout_pids: fanouts, sim_pid: sim_pid}}
 	end
 
   def handle_cast(:sense, state) do 
@@ -38,27 +38,12 @@ defmodule Phenotype.Sensor do
     for pid <- state.fanout_pids do 
       # as we don't know where it will go to ( it could very well directly go to an actuator ... )
       # But as Elixir is somewhat open ...
-      # Ah, also note that we dynamically call a function with apply :)
-      # Although there is only one function thus callable so far :) 
       
-      Phenotype.Neuron.forward(pid, apply(__MODULE__, state.name,[state.vector_length]) , self())
+      # Scape ensure that we have someone over there :) 
+      {:percept, data} = GenServer.call(state.sim_pid, :sense)
+      Phenotype.Neuron.forward(pid, data , self())
       # Be it an actuator or a neuron it will work, as both will receive the same message.
     end
     {:noreply, state}
   end
-
-
-  # Create a vector of given length with random number inside.
-  def rng(vector_length) do
-    rng(vector_length, [])
-  end
-
-  def rng(0, acc) do
-    acc
-  end
-  
-  def rng(v, acc) do
-    rng(v-1, [:random.uniform() | acc])
-  end
-
 end

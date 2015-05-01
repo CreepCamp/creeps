@@ -67,7 +67,7 @@ defmodule Genotype.Dot do
 
  def prepare_layers([], acc), do: acc
 
- def generate_item(pid, {id, :neuron, %Genotype.Neuron{ input_ids: inputs, output_ids: outputs, activation_function: function, layer: layer} }  , opts) do
+ def generate_item(pid, {id, :neuron, %Genotype.Neuron{ input_ids: inputs, activation_function: function, layer: layer} }  , _opts) do
   biais = for %{id: iid, weight: weight} <- inputs do
     if iid != :biais do
       IO.write(pid, "#{short_id(iid)} -> #{short_id(id)} [taillabel=\"#{inspect weight}\"]; \n")
@@ -86,12 +86,12 @@ defmodule Genotype.Dot do
 
  # sensor's
  # defstruct id: nil, cortex_id: nil, name: nil, vector_length: 0, fanout_ids: []
- def generate_item(pid, {id, :sensor, %Genotype.Sensor{ fanout_ids: outputs, name: function} }  , opts) do
+ def generate_item(pid, {id, :sensor, %Genotype.Sensor{ name: function} }  , _opts) do
   IO.write(pid, "#{short_id(id)} [label=\"sensor_#{short_id(id)}\n#{function}\", shape=box]; \n")
   short_id(id)
  end
 
- def generate_item(pid, {id, :actuator, %Genotype.Actuator{ fanin_ids: inputs} } , opts) do
+ def generate_item(pid, {id, :actuator, %Genotype.Actuator{ fanin_ids: inputs} } , _opts) do
   IO.write(pid, "#{short_id(id)} [label=\"actuator_#{short_id(id)}\", shape=box]; \n")
   for i <- inputs, do: IO.write(pid, " #{short_id(i)} -> #{short_id(id)}; \n")
   short_id(id)
